@@ -1,5 +1,7 @@
 import cors from "cors"
 import express from "express"
+import listEndpoints from "express-list-endpoints"
+
 import dogsData from "./data/dogs.json"
 
 // Defines the port the app will run on. Defaults to 8080, but can be overridden
@@ -14,11 +16,35 @@ app.use(express.json())
 
 // Start defining your routes here
 app.get("/", (req, res) => {
-  res.send("Hello Technigo! ")
+  const endpoints = listEndpoints(app)
+  res.json({
+    message: "Welcome to the Dog API!",
+    endpoints: endpoints
+  })
+
+  // res.send("Hello Technigo! ")
 })
 
 app.get("/dogs", (req, res) => {
-  res.json(dogsData)
+
+  const { breed, color, vaccinated } = req.query
+
+  let filteredDogs = dogsData
+
+  if (breed) {
+    filteredDogs = filteredDogs.filter(dog => dog.breed.toLowerCase() === breed.toLowerCase())
+  }
+  if (color) {
+    filteredDogs = filteredDogs.filter(dog => dog.color.toLowerCase() === color.toLowerCase())
+  }
+  if (vaccinated) {
+    const isVaccinated = vaccinated.toLowerCase() === "true"
+    filteredDogs = filteredDogs.filter(dog => dog.vaccinated === isVaccinated)
+  }
+
+
+
+  res.json(filteredDogs)
 })
 
 app.get("/dogs/:name", (req, res) => {
@@ -30,8 +56,6 @@ app.get("/dogs/:name", (req, res) => {
   } else {
     res.status(404).json({ error: "Dog not found" })
   }
-
-  res.json(dog)
 }
 
 )
