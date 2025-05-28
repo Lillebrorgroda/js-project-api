@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Bella",
+    "breed": "Labrador Retriever",
+    "age": 3,
+    "color": "black",
+    "weight_kg": 25,
+    "vaccinated": true
+  },
+  {
+    "name": "Charlie",
+    "breed": "Golden Retriever",
+    "age": 5,
+    "color": "golden",
+    "weight_kg": 30,
+    "vaccinated": true
+  },
+  {
+    "name": "Milo",
+    "breed": "Beagle",
+    "age": 2,
+    "color": "tricolor",
+    "weight_kg": 10,
+    "vaccinated": false
+  },
+  {
+    "name": "Luna",
+    "breed": "German Shepherd",
+    "age": 4,
+    "color": "brown and black",
+    "weight_kg": 35,
+    "vaccinated": true
+  },
+  {
+    "name": "Daisy",
+    "breed": "Poodle",
+    "age": 1,
+    "color": "white",
+    "weight_kg": 8,
+    "vaccinated": true
+  }
+]
