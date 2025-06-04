@@ -1,18 +1,52 @@
 import cors from "cors"
 import express from "express"
 import listEndpoints from "express-list-endpoints"
+import mongoose from "mongoose"
 
 import dogsData from "./data/dogs.json"
+
+const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/dogs"
+// Connect to MongoDB
+mongoose.connect(mongoUrl)
 
 // Defines the port the app will run on. Defaults to 8080, but can be overridden
 // when starting the server. Example command to overwrite PORT env variable value:
 // PORT=9000 npm start
-const port = process.env.PORT || 8080
+const port = process.env.PORT || 8081
 const app = express()
 
 // Add middlewares to enable cors and json body parsing
 app.use(cors())
 app.use(express.json())
+
+const dogSchema = new mongoose.Schema({
+  id: Number,
+  name: {
+    type: String,
+    required: true,
+    minlength: 2,
+    maxlength: 50,
+  },
+  breed: String,
+  age: Number,
+  color: String,
+  weight_kg: Number,
+  vaccinated: Boolean,
+})
+
+const Dog = mongoose.model("Dog", dogSchema)
+
+// Seed the database with initial data if it's empty
+if (process.env.RESET_DATABASE) {
+  const seedDatabase = async () => {
+    await Dog.deleteMany({}) // Clear existing data
+    dogsData.forEach(dog => {
+      new Dog(dog).save()
+    })
+  }
+  seedDatabase()
+}
+
 
 // Start defining your routes here
 app.get("/", (req, res) => {
@@ -22,43 +56,167 @@ app.get("/", (req, res) => {
     endpoints: endpoints
   })
 
-  // res.send("Hello Technigo! ")
+
 })
 
-app.get("/dogs", (req, res) => {
+app.get("/dogs", async (req, res) => {
 
   const { breed, color, vaccinated } = req.query
 
-  let filteredDogs = dogsData
+  // let filteredDogs = await Dog.find() // Fetch all dogs from the database
 
+  const query = {}
   if (breed) {
-    filteredDogs = filteredDogs.filter(dog => dog.breed.toLowerCase() === breed.toLowerCase())
+    query.breed = breed.toLowerCase()
   }
   if (color) {
-    filteredDogs = filteredDogs.filter(dog => dog.color.toLowerCase() === color.toLowerCase())
+    query.color = color.toLowerCase()
   }
   if (vaccinated) {
-    const isVaccinated = vaccinated.toLowerCase() === "true"
-    filteredDogs = filteredDogs.filter(dog => dog.vaccinated === isVaccinated)
+    query.vaccinated = vaccinated.toLowerCase() === "true"
   }
 
+  try {
+    const filteredDogs = await Dog.find(query)
+    if (filteredDogs.length === 0) {
+      return res.status(404).json({
+        success: false,
+        response: [],
+        message: "No dogs found matching the criteria. Please try different filters."
+      })
+    }
+    res.status(200).json({
+      success: true,
+      response: filteredDogs,
+      message: "Dogs found successfully"
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      response: error,
+      message: "An error occurred while fetching dogs"
+    })
 
+  }
 
-  res.json(filteredDogs)
+  //hearts and category or day of writing
+
 })
 
-app.get("/dogs/:name", (req, res) => {
-  const dogName = req.params.name.toLowerCase()
-  const dog = dogsData.find(dog => dog.name.toLowerCase() === dogName)
+app.get("/dogs/:id", async (req, res) => {
+  const { id } = req.params
 
-  if (dog) {
-    res.json(dog)
-  } else {
-    res.status(404).json({ error: "Dog not found" })
+  try {
+    const dog = await Dog.findById(id)
+
+    if (!dog) {
+      return res.status(404).json({
+        success: false,
+        message: "Dog not found"
+      })
+    }
+    res.status(200).json({
+      success: true,
+      response: dog,
+      message: "Dog found successfully"
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      response: error,
+      message: "An error occurred while fetching the dog"
+    })
+  }
+
+
+})
+
+app.post("/dogs", async (req, res) => {
+  const { name, breed, color, age, weight_kg, vaccinated } = req.body
+
+  try {
+    const newDog = await new Dog({
+      name,
+      breed,
+      color,
+      age,
+      weight_kg,
+      vaccinated
+    }).save()
+    res.status(201).json({
+      success: true,
+      response: newDog,
+      message: "Dog created successfully"
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      response: error,
+      message: "An error occurred while creating the dog"
+    })
+  }
+})
+
+app.delete("/dogs/:id", async (req, res) => {
+  const { id } = req.params
+  try {
+    const deletedDog = await Dog.findByIdAndDelete(id)
+
+    if (!deletedDog) {
+      return res.status(404).json({
+        success: false,
+        response: null,
+        message: "Dog not found"
+      })
+    }
+    res.status(200).json({
+      success: true,
+      response: deletedDog,
+      message: "Dog deleted successfully"
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      response: error,
+      message: "An error occurred while deleting the dog"
+    })
+  }
+})
+
+app.patch("/dogs/:id", async (req, res) => {
+  const { id } = req.params
+  const { name, breed, color, age, weight_kg, vaccinated } = req.body
+  try {
+    const updatedDog = await Dog.findByIdAndUpdate(id, {
+      name,
+      breed,
+      color,
+      age,
+      weight_kg,
+      vaccinated
+    }, { new: true })
+    if (!updatedDog) {
+      return res.status(404).json({
+        success: false,
+        response: null,
+        message: "Dog not found"
+      })
+    }
+    res.status(200).json({
+      success: true,
+      response: updatedDog,
+      message: "Dog updated successfully"
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      response: error,
+      message: "An error occurred while updating the dog"
+    })
   }
 }
-
 )
+
 
 // Start the server
 app.listen(port, () => {
