@@ -25,7 +25,7 @@ const dogSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 2,
-    maxlength: 50,
+    max_length: 50,
   },
   breed: String,
   age: Number,
@@ -34,7 +34,59 @@ const dogSchema = new mongoose.Schema({
   vaccinated: Boolean,
 })
 
+//const messageSchema = new mongoose.Schema({
+// message: {
+//   type: String,
+//   required: true,
+//   minlength: 5,
+//   max_length: 140,
+// },
+// hearts: {
+//   type: Number,
+//   default: 0,
+// },
+// category: {
+//   type: String,
+//   enum:["happy", "family", "friends", "pets", "nature", "funny", "gratitude", "other"],
+//   default: "other",
+// },
+// date: {
+//   type: Date,
+//   default: Date.now,
+// },
+// createdBy: {
+//   type: mongoose.Schema.Types.ObjectId,
+//   ref: "User",
+//   required: true,
+// },
+//})
+
+// const userSchema = new mongoose.Schema({
+//   username: { 
+//     type: String,
+//     required: true,
+//     unique: true,
+//     minlength: 3,
+//     max_length: 20,
+//   },
+//   password: {
+//     type: String,
+//     required: true,
+//     minlength: 6,
+//     max_length: 50,
+//   },
+//   email: {
+//     type: String,
+//     required: true,
+//     unique: true,
+//     match: /.+\@.+\..+/,
+//   },
+// })
+
 const Dog = mongoose.model("Dog", dogSchema)
+
+// const Message = mongoose.model("Message", messageSchema)
+// const User = mongoose.model("User", userSchema)
 
 // Seed the database with initial data if it's empty
 if (process.env.RESET_DATABASE) {
@@ -46,6 +98,18 @@ if (process.env.RESET_DATABASE) {
   }
   seedDatabase()
 }
+
+// Uncomment the following lines to seed the database with initial data
+// if (process.env.RESET_MESSAGES) {
+//const seedMessages = async () => {
+// await Message.deleteMany({}) // Clear existing messages
+// messagesData.forEach(message => {
+//   new Message(message).save() 
+// })
+// }
+// seedMessages()
+//}
+
 
 
 // Start defining your routes here
@@ -185,7 +249,7 @@ app.delete("/dogs/:id", async (req, res) => {
 
 app.patch("/dogs/:id", async (req, res) => {
   const { id } = req.params
-  const { name, breed, color, age, weight_kg, vaccinated } = req.body
+  const { name, breed, color, age, weight_kg, vaccinated } = req.body //maybe change variable names to newName, newBreed, etc.
   try {
     const updatedDog = await Dog.findByIdAndUpdate(id, {
       name,
@@ -194,7 +258,7 @@ app.patch("/dogs/:id", async (req, res) => {
       age,
       weight_kg,
       vaccinated
-    }, { new: true })
+    }, { new: true, runValidators: true })
     if (!updatedDog) {
       return res.status(404).json({
         success: false,
@@ -216,6 +280,7 @@ app.patch("/dogs/:id", async (req, res) => {
   }
 }
 )
+
 
 
 // Start the server
