@@ -3,10 +3,13 @@ import express from "express"
 import listEndpoints from "express-list-endpoints"
 import mongoose from "mongoose"
 import dotenv from "dotenv"
+import bcrypt from "bcrypt"
 
 const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/thoughts-api"
 // Connect to MongoDB
 mongoose.connect(mongoUrl)
+
+dotenv.config()
 
 // Defines the port the app will run on. Defaults to 8080, but can be overridden
 // when starting the server. Example command to overwrite PORT env variable value:
