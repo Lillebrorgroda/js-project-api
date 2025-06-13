@@ -5,7 +5,7 @@ import mongoose from "mongoose"
 
 import dogsData from "./data/dogs.json"
 
-const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/dogs"
+const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/thoughts-api"
 // Connect to MongoDB
 mongoose.connect(mongoUrl)
 
@@ -19,267 +19,241 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-const dogSchema = new mongoose.Schema({
-  id: Number,
-  name: {
-    type: String,
-    required: true,
-    minlength: 2,
-    max_length: 50,
-  },
-  breed: String,
-  age: Number,
-  color: String,
-  weight_kg: Number,
-  vaccinated: Boolean,
-})
-
-//const messageSchema = new mongoose.Schema({
-// message: {
-//   type: String,
-//   required: true,
-//   minlength: 5,
-//   max_length: 140,
-// },
-// hearts: {
-//   type: Number,
-//   default: 0,
-// },
-// category: {
-//   type: String,
-//   enum:["happy", "family", "friends", "pets", "nature", "funny", "gratitude", "other"],
-//   default: "other",
-// },
-// date: {
-//   type: Date,
-//   default: Date.now,
-// },
-// createdBy: {
-//   type: mongoose.Schema.Types.ObjectId,
-//   ref: "User",
-//   required: true,
-// },
-//})
-
-// const userSchema = new mongoose.Schema({
-//   username: { 
+// const dogSchema = new mongoose.Schema({
+//   id: Number,
+//   name: {
 //     type: String,
 //     required: true,
-//     unique: true,
-//     minlength: 3,
-//     max_length: 20,
-//   },
-//   password: {
-//     type: String,
-//     required: true,
-//     minlength: 6,
+//     minlength: 2,
 //     max_length: 50,
 //   },
-//   email: {
-//     type: String,
-//     required: true,
-//     unique: true,
-//     match: /.+\@.+\..+/,
-//   },
+//   breed: String,
+//   age: Number,
+//   color: String,
+//   weight_kg: Number,
+//   vaccinated: Boolean,
 // })
 
-const Dog = mongoose.model("Dog", dogSchema)
+const thoughtSchema = new mongoose.Schema({
+  message: {
+    type: String,
+    required: true,
+    minlength: 5,
+    max_length: 140,
+  },
+  hearts: {
+    type: Number,
+    default: 0,
+  },
+  category: {
+    type: String,
+    enum: ["happy", "family", "friends", "pets", "nature", "funny", "gratitude", "other"],
+    default: "other",
+  },
+  date: {
+    type: Date,
+    default: Date.now,
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: false,
+  },
+})
 
-// const Message = mongoose.model("Message", messageSchema)
-// const User = mongoose.model("User", userSchema)
+const userSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    minlength: 3,
+    max_length: 20,
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6,
+    max_length: 50,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    match: /.+\@.+\..+/,
+  },
+})
 
-// Seed the database with initial data if it's empty
-if (process.env.RESET_DATABASE) {
-  const seedDatabase = async () => {
-    await Dog.deleteMany({}) // Clear existing data
-    dogsData.forEach(dog => {
-      new Dog(dog).save()
+const Thought = mongoose.model("Thought", thoughtSchema)
+const User = mongoose.model("User", userSchema)
+
+if (process.env.RESET_THOUGHTS) {
+  const seedThoughts = async () => {
+    await Thought.deleteMany({}) // Clear existing messages
+    thoughtsData.forEach(thought => {
+      new Thought(thought).save()
     })
   }
-  seedDatabase()
+  seedThoughts()
 }
 
-// Uncomment the following lines to seed the database with initial data
-// if (process.env.RESET_MESSAGES) {
-//const seedMessages = async () => {
-// await Message.deleteMany({}) // Clear existing messages
-// messagesData.forEach(message => {
-//   new Message(message).save() 
-// })
-// }
-// seedMessages()
-//}
 
-
-
-// Start defining your routes here
 app.get("/", (req, res) => {
   const endpoints = listEndpoints(app)
   res.json({
-    message: "Welcome to the Dog API!",
+    message: "Welcome to the Happy thoughts API",
     endpoints: endpoints
   })
-
-
 })
 
-app.get("/dogs", async (req, res) => {
-
-  const { breed, color, vaccinated } = req.query
-
-  // let filteredDogs = await Dog.find() // Fetch all dogs from the database
-
-  const query = {}
-  if (breed) {
-    query.breed = breed.toLowerCase()
+app.get("/thoughts", async (req, res) => {
+  const { message, hearts, category, date } = req.query
+  let query = {}
+  if (message) {
+    query.message = message.toLowerCase()
   }
-  if (color) {
-    query.color = color.toLowerCase()
+  if (hearts) {
+    query.hearts = hearts
   }
-  if (vaccinated) {
-    query.vaccinated = vaccinated.toLowerCase() === "true"
+  if (category) {
+    query.category = category.toLowerCase()
   }
-
+  if (date) {
+    query.date = { $gte: new Date(date) }
+  }
   try {
-    const filteredDogs = await Dog.find(query)
-    if (filteredDogs.length === 0) {
+    const filteredThoughts = await Thought.find(query)
+    if (filteredThoughts.length === 0) {
       return res.status(404).json({
         success: false,
         response: [],
-        message: "No dogs found matching the criteria. Please try different filters."
+        message: "No messages found matching the criteria. Please try different filters."
       })
     }
     res.status(200).json({
       success: true,
-      response: filteredDogs,
-      message: "Dogs found successfully"
+      response: filteredThoughts,
+      message: "Messages found successfully"
     })
   } catch (error) {
+    console.error("Error fetching messages:", error)
     res.status(500).json({
       success: false,
       response: error,
-      message: "An error occurred while fetching dogs"
+      message: "An error occurred while fetching messages"
     })
-
   }
-
-  //hearts and category or day of writing
-
 })
 
-app.get("/dogs/:id", async (req, res) => {
+
+app.get("/thoughts/:id", async (req, res) => {
   const { id } = req.params
 
   try {
-    const dog = await Dog.findById(id)
+    const thought = await Thought.findById(id)
 
-    if (!dog) {
+    if (!thought) {
       return res.status(404).json({
         success: false,
-        message: "Dog not found"
+        message: "Thought not found"
       })
     }
     res.status(200).json({
       success: true,
-      response: dog,
-      message: "Dog found successfully"
+      response: thought,
+      message: "Thought found successfully"
     })
   } catch (error) {
     res.status(500).json({
       success: false,
       response: error,
-      message: "An error occurred while fetching the dog"
+      message: "An error occurred while fetching the thought"
     })
   }
-
-
 })
 
-app.post("/dogs", async (req, res) => {
-  const { name, breed, color, age, weight_kg, vaccinated } = req.body
+
+app.post("/thoughts", async (req, res) => {
+  const { message, hearts, category, date, createdBy } = req.body
 
   try {
-    const newDog = await new Dog({
-      name,
-      breed,
-      color,
-      age,
-      weight_kg,
-      vaccinated
+    const newThought = await new Thought({
+      message,
+      hearts,
+      category,
+      date,
+      createdBy
     }).save()
     res.status(201).json({
       success: true,
-      response: newDog,
-      message: "Dog created successfully"
+      response: newThought,
+      message: "Thought created successfully"
     })
   } catch (error) {
     res.status(500).json({
       success: false,
       response: error,
-      message: "An error occurred while creating the dog"
+      message: "An error occurred while creating the thought"
     })
   }
 })
 
-app.delete("/dogs/:id", async (req, res) => {
+app.delete("/thoughts/:id", async (req, res) => {
   const { id } = req.params
   try {
-    const deletedDog = await Dog.findByIdAndDelete(id)
+    const deletedThought = await Thought.findByIdAndDelete(id)
 
-    if (!deletedDog) {
+    if (!deletedThought) {
       return res.status(404).json({
         success: false,
         response: null,
-        message: "Dog not found"
+        message: "Thought not found"
       })
     }
     res.status(200).json({
       success: true,
-      response: deletedDog,
-      message: "Dog deleted successfully"
+      response: deletedThought,
+      message: "Thought deleted successfully"
     })
   } catch (error) {
     res.status(500).json({
       success: false,
       response: error,
-      message: "An error occurred while deleting the dog"
+      message: "An error occurred while deleting the thought"
     })
   }
 })
 
-app.patch("/dogs/:id", async (req, res) => {
+app.patch("/thoughts/:id", async (req, res) => {
   const { id } = req.params
-  const { name, breed, color, age, weight_kg, vaccinated } = req.body //maybe change variable names to newName, newBreed, etc.
+  const { message, hearts, category, date, createdBy } = req.body //maybe change variable names to newMessage, newHearts, etc.
   try {
-    const updatedDog = await Dog.findByIdAndUpdate(id, {
-      name,
-      breed,
-      color,
-      age,
-      weight_kg,
-      vaccinated
+    const updatedThought = await Thought.findByIdAndUpdate(id, {
+      message,
+      hearts,
+      category,
+      date,
+      createdBy
     }, { new: true, runValidators: true })
-    if (!updatedDog) {
+    if (!updatedThought) {
       return res.status(404).json({
         success: false,
         response: null,
-        message: "Dog not found"
+        message: "Thought not found"
       })
     }
     res.status(200).json({
       success: true,
-      response: updatedDog,
-      message: "Dog updated successfully"
+      response: updatedThought,
+      message: "Thought updated successfully"
     })
   } catch (error) {
     res.status(500).json({
       success: false,
       response: error,
-      message: "An error occurred while updating the dog"
+      message: "An error occurred while updating the thought"
     })
   }
-}
-)
+})
 
 
 
