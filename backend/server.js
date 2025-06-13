@@ -2,8 +2,7 @@ import cors from "cors"
 import express from "express"
 import listEndpoints from "express-list-endpoints"
 import mongoose from "mongoose"
-
-import dogsData from "./data/dogs.json"
+import dotenv from "dotenv"
 
 const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/thoughts-api"
 // Connect to MongoDB
@@ -12,27 +11,13 @@ mongoose.connect(mongoUrl)
 // Defines the port the app will run on. Defaults to 8080, but can be overridden
 // when starting the server. Example command to overwrite PORT env variable value:
 // PORT=9000 npm start
-const port = process.env.PORT || 8081
+const port = process.env.PORT || 8082
 const app = express()
 
 // Add middlewares to enable cors and json body parsing
 app.use(cors())
 app.use(express.json())
 
-// const dogSchema = new mongoose.Schema({
-//   id: Number,
-//   name: {
-//     type: String,
-//     required: true,
-//     minlength: 2,
-//     max_length: 50,
-//   },
-//   breed: String,
-//   age: Number,
-//   color: String,
-//   weight_kg: Number,
-//   vaccinated: Boolean,
-// })
 
 const thoughtSchema = new mongoose.Schema({
   message: {
@@ -196,6 +181,25 @@ app.post("/thoughts", async (req, res) => {
     })
   }
 })
+
+app.post("/thoughts/:id/like", async (req, res) => {
+  try {
+    const { id } = req.params
+    const updatedThought = await Thought.findByIdAndUpdate(
+      id,
+      { $inc: { hearts: 1 } },
+      { new: true }
+    )
+    if (!updatedThought) {
+      return res.status(404).json({ success: false, message: "Thought not found" })
+    }
+    res.status(200).json({ success: true, response: updatedThought })
+  } catch (error) {
+    console.error("Error liking thought:", error)
+    res.status(500).json({ success: false, message: "Error liking thought" })
+  }
+})
+
 
 app.delete("/thoughts/:id", async (req, res) => {
   const { id } = req.params
