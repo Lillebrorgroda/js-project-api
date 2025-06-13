@@ -4,6 +4,8 @@ import listEndpoints from "express-list-endpoints"
 import mongoose from "mongoose"
 import dotenv from "dotenv"
 import bcrypt from "bcrypt"
+import crypto from "crypto"
+import { access } from "fs"
 
 const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/thoughts-api"
 // Connect to MongoDB
@@ -69,7 +71,21 @@ const userSchema = new mongoose.Schema({
     unique: true,
     match: /.+\@.+\..+/,
   },
+  accessToken: {
+    type: String,
+    default: () => crypto.randomBytes(128).toString("hex"),
+  },
 })
+
+const authenticationUser = async (req, res, next) => {
+  const user = await User.findOne({ accessToken: req.headers.authorization })
+  if (user) {
+    req.user = user
+    next()
+  } else {
+    res.status(401).json({ loggedOut: true, message: "Unauthorized" })
+  }
+}
 
 const Thought = mongoose.model("Thought", thoughtSchema)
 const User = mongoose.model("User", userSchema)
@@ -159,8 +175,43 @@ app.get("/thoughts/:id", async (req, res) => {
   }
 })
 
+app.post("/users", async (req, res) => {
+  try {
+    const { username, password, email } = req.body
+    const user = new User({
+      username,
+      password: await bcrypt.hashSync(password), // Hash the password
+      email
+    })
+    user.save()
+    res.status(201).json({
+      id: user._id,
+      accessToken: user.accessToken,
 
-app.post("/thoughts", async (req, res) => {
+    })
+  } catch (error) {
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Username or email already exists",
+        error: error.message
+      })
+    }
+  }
+})
+
+app.post("/users/login", async (req, res) => {
+  const user = await User.findOne({ email: req.body.email })
+  if (user && bcrypt.compareSync(req.body.password, user.password)) {
+    res.json({ userId: user._id, accessToken: user.accessToken })
+  } else {
+    res.status(401).json({ notFound: true, message: "Invalid email or password" })
+  }
+})
+
+
+
+app.post("/thoughts", authenticationUser, async (req, res) => {
   const { message, hearts, category, date, createdBy } = req.body
 
   try {
