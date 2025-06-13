@@ -106,7 +106,7 @@ app.get("/thoughts", async (req, res) => {
     query.date = { $gte: new Date(date) }
   }
   try {
-    const filteredThoughts = await Thought.find(query)
+    const filteredThoughts = await Thought.find(query).sort({ date: -1 })
     if (filteredThoughts.length === 0) {
       return res.status(404).json({
         success: false,
