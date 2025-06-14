@@ -175,7 +175,7 @@ app.get("/thoughts/:id", async (req, res) => {
   }
 })
 
-app.post("/users", async (req, res) => {
+app.post("/users/register", async (req, res) => {
   try {
     const { username, password, email } = req.body
     const user = new User({
