@@ -3,9 +3,8 @@ import express from "express"
 import listEndpoints from "express-list-endpoints"
 import mongoose from "mongoose"
 import dotenv from "dotenv"
-import bcrypt from "bcrypt"
+import bcrypt from "bcryptjs"
 import crypto from "crypto"
-import { access } from "fs"
 
 const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/thoughts-api"
 // Connect to MongoDB
