@@ -117,7 +117,9 @@ app.get("/thoughts", async (req, res) => {
     query.date = { $gte: new Date(date) }
   }
   try {
-    const filteredThoughts = await Thought.find(query).sort({ date: -1 })
+    const filteredThoughts = await Thought.find(query)
+      .sort({ date: -1 })
+      .populate("createdBy", "username")
     if (filteredThoughts.length === 0) {
       return res.status(404).json({
         success: false,
@@ -266,15 +268,27 @@ app.post("/thoughts/:id/like", async (req, res) => {
 app.delete("/thoughts/:id", authenticationUser, async (req, res) => {
   const { id } = req.params
   try {
-    const deletedThought = await Thought.findByIdAndDelete(id)
 
-    if (!deletedThought) {
+    const thought = await Thought.findById(id)
+    if (!thought) {
       return res.status(404).json({
         success: false,
         response: null,
         message: "Thought not found"
       })
     }
+
+    if (thought.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        response: null,
+        message: "You are not authorized to delete this thought"
+      })
+    }
+
+
+    const deletedThought = await Thought.findByIdAndDelete(id)
+
     res.status(200).json({
       success: true,
       response: deletedThought,
@@ -291,22 +305,33 @@ app.delete("/thoughts/:id", authenticationUser, async (req, res) => {
 
 app.patch("/thoughts/:id", authenticationUser, async (req, res) => {
   const { id } = req.params
-  const { message, hearts, category, date, createdBy } = req.body //maybe change variable names to newMessage, newHearts, etc.
+  const { message, category } = req.body
   try {
-    const updatedThought = await Thought.findByIdAndUpdate(id, {
-      message,
-      hearts,
-      category,
-      date,
-      createdBy
-    }, { new: true, runValidators: true })
-    if (!updatedThought) {
+    const thought = await Thought.findById(id)
+    if (!thought) {
       return res.status(404).json({
         success: false,
         response: null,
         message: "Thought not found"
       })
     }
+    if (thought.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        response: null,
+        message: "You are not authorized to update this thought"
+      })
+    }
+
+    const updateData = {}
+    if (message) updateData.message = message
+    if (category) updateData.category = category
+
+    const updatedThought = await Thought.findByIdAndUpdate(
+      id, updateData,
+      { new: true, runValidators: true })
+
+
     res.status(200).json({
       success: true,
       response: updatedThought,
