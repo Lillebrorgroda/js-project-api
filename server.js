@@ -6,11 +6,13 @@ import dotenv from "dotenv"
 import bcrypt from "bcryptjs"
 import crypto from "crypto"
 
+dotenv.config()
+
 const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/thoughts-api"
 // Connect to MongoDB
 mongoose.connect(mongoUrl)
 
-dotenv.config()
+
 
 // Defines the port the app will run on. Defaults to 8080, but can be overridden
 // when starting the server. Example command to overwrite PORT env variable value:
@@ -28,7 +30,7 @@ const thoughtSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 5,
-    max_length: 140,
+    maxlength: 140,
   },
   hearts: {
     type: Number,
@@ -89,15 +91,6 @@ const authenticationUser = async (req, res, next) => {
 const Thought = mongoose.model("Thought", thoughtSchema)
 const User = mongoose.model("User", userSchema)
 
-if (process.env.RESET_THOUGHTS) {
-  const seedThoughts = async () => {
-    await Thought.deleteMany({}) // Clear existing messages
-    thoughtsData.forEach(thought => {
-      new Thought(thought).save()
-    })
-  }
-  seedThoughts()
-}
 
 
 app.get("/", (req, res) => {
@@ -177,9 +170,26 @@ app.get("/thoughts/:id", async (req, res) => {
 app.post("/users/register", async (req, res) => {
   try {
     const { username, password, email } = req.body
+
+    if (!username || !password || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Username, password and email are required"
+      })
+    }
+
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] })
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Username or email already exists"
+      })
+    }
+
+
     const user = new User({
       username,
-      password: await bcrypt.hashSync(password), // Hash the password
+      password: bcrypt.hashSync(password, 10), // Hash the password
       email
     })
     user.save()
@@ -189,15 +199,14 @@ app.post("/users/register", async (req, res) => {
 
     })
   } catch (error) {
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: "Username or email already exists",
-        error: error.message
-      })
-    }
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while registering the user",
+      error: error.message
+    })
   }
-})
+}
+)
 
 app.post("/users/login", async (req, res) => {
   const user = await User.findOne({ email: req.body.email })
@@ -254,7 +263,7 @@ app.post("/thoughts/:id/like", async (req, res) => {
 })
 
 
-app.delete("/thoughts/:id", async (req, res) => {
+app.delete("/thoughts/:id", authenticationUser, async (req, res) => {
   const { id } = req.params
   try {
     const deletedThought = await Thought.findByIdAndDelete(id)
@@ -280,7 +289,7 @@ app.delete("/thoughts/:id", async (req, res) => {
   }
 })
 
-app.patch("/thoughts/:id", async (req, res) => {
+app.patch("/thoughts/:id", authenticationUser, async (req, res) => {
   const { id } = req.params
   const { message, hearts, category, date, createdBy } = req.body //maybe change variable names to newMessage, newHearts, etc.
   try {
