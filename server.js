@@ -303,7 +303,7 @@ app.delete("/thoughts/:id", authenticationUser, async (req, res) => {
   }
 })
 
-app.patch("/thoughts/:id", authenticationUser, async (req, res) => {
+app.put("/thoughts/:id", authenticationUser, async (req, res) => {
   const { id } = req.params
   const { message, category } = req.body
   try {
